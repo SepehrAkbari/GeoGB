@@ -5,7 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
 if ! command -v uv >/dev/null 2>&1; then
-  echo "UV is required; see README.md." >&2
+  echo "UV is required." >&2
   exit 1
 fi
 
@@ -15,7 +15,7 @@ cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 
 if ! command -v M2 >/dev/null 2>&1 || ! M2 --version >/dev/null 2>&1; then
-  echo "Macaulay2 is unavailable; see docs/SETUP.md." >&2
+  echo "Macaulay2 is unavailable." >&2
   exit 1
 fi
 
