@@ -32,7 +32,7 @@ def discount_rewards(rewards, gam):
 
     """
     cumulative_reward = 0
-    discounted_rewards = np.zeros_like(rewards, dtype=np.float)
+    discounted_rewards = np.zeros_like(rewards, dtype=float)
     for i in reversed(range(len(rewards))):
         cumulative_reward = rewards[i] + gam * cumulative_reward
         discounted_rewards[i] = cumulative_reward
@@ -71,8 +71,8 @@ def compute_advantages(rewards, values, gam, lam):
     array([1.33203125, 1.328125  , 1.3125    , 1.25      , 1.        ])
 
     """
-    rewards = np.array(rewards, dtype=np.float)
-    values = np.array(values, dtype=np.float)
+    rewards = np.array(rewards, dtype=float)
+    values = np.array(values, dtype=float)
     delta = rewards - values
     delta[:-1] += gam * values[1:]
     return discount_rewards(delta, gam * lam)
@@ -293,12 +293,12 @@ class Agent:
                  kld_limit=0.01, ent_bonus=0.0):
         self.policy_model = policy_network
         self.policy_loss = NotImplementedError
-        self.policy_optimizer = tf.keras.optimizers.Adam(lr=policy_lr)
+        self.policy_optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=policy_lr)
         self.policy_updates = policy_updates
 
         self.value_model = value_network
         self.value_loss = tf.keras.losses.mse
-        self.value_optimizer = tf.keras.optimizers.Adam(lr=value_lr)
+        self.value_optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=value_lr)
         self.value_updates = value_updates
 
         self.lam = lam

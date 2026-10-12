@@ -1,7 +1,12 @@
 *.pyc
 *.so
 *.egg-info/
+.venv/
+.pytest_cache/
+.ipynb_checkpoints/
 build/
 data/
+data
+artifacts/
+runs/
 deepgroebner/wrapped.cpp
-

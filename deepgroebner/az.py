@@ -185,12 +185,12 @@ class AZAgent:
         self.policy_model = policy_network
         self.policy_loss = tf.keras.losses.CategoricalCrossentropy(
             from_logits=True)
-        self.policy_optimizer = tf.keras.optimizers.Adam(lr=policy_lr)
+        self.policy_optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=policy_lr)
         self.policy_updates = policy_updates
 
         self.value_model = value_network
         self.value_loss = tf.keras.losses.MSE
-        self.value_optimizer = tf.keras.optimizers.Adam(lr=value_lr)
+        self.value_optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=value_lr)
         self.value_updates = value_updates
 
     def act(self, env, root=None):

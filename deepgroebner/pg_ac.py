@@ -32,7 +32,7 @@ def discount_rewards(rewards, gam):
 
     """
     cumulative_reward = 0
-    discounted_rewards = np.zeros_like(rewards, dtype=np.float)
+    discounted_rewards = np.zeros_like(rewards, dtype=float)
     for i in reversed(range(len(rewards))):
         cumulative_reward = rewards[i] + gam * cumulative_reward
         discounted_rewards[i] = cumulative_reward
@@ -71,27 +71,27 @@ def compute_advantages(rewards, values, gam, lam):
     array([1.33203125, 1.328125  , 1.3125    , 1.25      , 1.        ])
 
     """
-    rewards = np.array(rewards, dtype=np.float)
-    values = np.array(values, dtype=np.float)
+    rewards = np.array(rewards, dtype=float)
+    values = np.array(values, dtype=float)
     delta = rewards - values
     delta[:-1] += gam * values[1:]
     return discount_rewards(delta, gam * lam)
 
 def calc_error(true, predicted):
-    true = -np.array(true, dtype = np.float)
-    predicted = np.array(predicted, dtype = np.float)
+    true = -np.array(true, dtype=float)
+    predicted = np.array(predicted, dtype=float)
     delta = np.abs(predicted - true)
     percent_error = delta/true
     return percent_error
 
 def calc_correlation(true, predicted):
-    true = -np.array(true, dtype = np.float)
-    predicted = np.array(predicted, dtype = np.float)
+    true = -np.array(true, dtype=float)
+    predicted = np.array(predicted, dtype=float)
     return np.corrcoef(true, predicted)[0,1]
 
 def calc_difference(true, predicted):
-    true = -np.array(true, dtype = np.float)
-    predicted = np.array(predicted, dtype = np.float)
+    true = -np.array(true, dtype=float)
+    predicted = np.array(predicted, dtype=float)
     return (predicted - true)
 
 
@@ -359,7 +359,7 @@ class Agent:
 
         self.policy_model = policy_network
         self.policy_loss = NotImplementedError
-        self.policy_optimizer = tf.keras.optimizers.Adam(lr=policy_lr)
+        self.policy_optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=policy_lr)
         self.policy_updates = policy_updates
 
         self.score = pv_function #Value model in there 
@@ -368,7 +368,7 @@ class Agent:
 
         self.value_model = value_network
         self.value_loss = tf.keras.losses.MSE #WOAH
-        self.value_optimizer = tf.keras.optimizers.Adam(lr=value_lr)
+        self.value_optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=value_lr)
         self.value_updates = value_updates
 
         self.lam = lam

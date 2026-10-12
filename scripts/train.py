@@ -3,6 +3,7 @@
 
 import argparse
 import datetime
+import gc
 import gym
 import json
 import numpy as np
@@ -325,3 +326,8 @@ if __name__ == '__main__':
     agent.train(env, episodes=args.episodes, epochs=args.epochs,
                 save_freq=args.save_freq, logdir=logdir, verbose=args.verbose,
                 max_episode_length=args.max_episode_length, batch_size=args.batch_size)
+    if hasattr(env, 'close'):
+        env.close()
+    del agent
+    tf.keras.backend.clear_session()
+    gc.collect()

@@ -3,6 +3,7 @@
 
 import argparse
 import datetime
+import gc
 import gym
 import json
 import numpy as np
@@ -190,3 +191,8 @@ if __name__ == '__main__':
         reward, length = agent.run_episode(env, max_episode_length=args.max_episode_length)
         with open(os.path.join(logdir, "results.csv"), 'a') as f:
             f.write(f"{reward},{length}\n")
+    if hasattr(env, 'close'):
+        env.close()
+    del agent
+    tf.keras.backend.clear_session()
+    gc.collect()

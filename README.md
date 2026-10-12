@@ -1,115 +1,84 @@
-<<<<<<< HEAD
 # GeoGB
-=======
-# DeepGroebner
 
-Applications of reinforcement learning to selection strategies in Buchberger's algorithm.
+GeoGB is a research continuation of Dylan Peifer's
+[DeepGroebner](https://github.com/dylanpeifer/deepgroebner) project. It studies
+reinforcement-learning selection strategies for Buchberger's algorithm and
+will contain the experiments and extensions developed for Sepehr Akbari's
+thesis.
 
-This is the main code repository for Dylan Peifer's 2021 PhD thesis at Cornell University and the paper
+The imported upstream baseline is DeepGroebner commit
+`94f3183efd290a400ab97908e52ac04de7b259de` (the v3-era thesis code). The
+original Git history, GPL-3.0 license, and authorship are preserved. The
+associated work is:
 
-* [Dylan Peifer, Michael Stillman, and Daniel Halpern-Leistner. Learning selection strategies in Buchberger's
-algorithm. In *Proceedings of the 37th International Conference on Machine Learning (ICML
-2020).*](https://icml.cc/virtual/2020/poster/6742) [arXiv:2005.01917](https://arxiv.org/abs/2005.01917)
+- Dylan Peifer, Michael Stillman, and Daniel Halpern-Leistner, "Learning
+  selection strategies in Buchberger's algorithm," ICML 2020,
+  [arXiv:2005.01917](https://arxiv.org/abs/2005.01917).
+- Dylan Peifer's 2021 Cornell University PhD thesis.
+- [DeepGroebner thesis data, Zenodo 4724144](https://doi.org/10.5281/zenodo.4724144).
 
-with corresponding precomputed statistics and training data available at
-[10.5281/zenodo.3676043](https://doi.org/10.5281/zenodo.3676043) and
-[10.5281/zenodo.4724144](https://doi.org/10.5281/zenodo.4724144). Refer to these archives for the exact version of the
-code used to generate results, and see also the [releases](https://github.com/dylanpeifer/deepgroebner/releases). This
-repository is still in active development.
+## Quick start on Apple Silicon macOS
 
-## Requirements and Installation
+```bash
+git clone --recurse-submodules https://github.com/SepehrAkbari/GeoGB.git
+cd GeoGB
+scripts/setup_macos.sh
+source .venv/bin/activate
+scripts/check_baseline.sh
+```
 
-The main codebase is a Python package in the `deepgroebner/` directory. To install dependencies create a
-[conda](https://www.anaconda.com/products/individual) environment from the included YAML file with
+The maintained native environment uses Python 3.10 and TensorFlow 2.13.1. The
+original `deepgroebner.yml` remains unchanged as a record of Dylan's Python 3.7
+environment.
 
-    conda env create -f deepgroebner.yml
-    conda activate deepgroebner
+See [docs/SETUP.md](docs/SETUP.md) for platform details and Macaulay2 setup.
+See [docs/DATA.md](docs/DATA.md) before downloading the 17.2 GB thesis archive.
+See [docs/BASELINE.md](docs/BASELINE.md) for the current validation record.
 
-and then install the `deepgroebner` package with
+## Repository relationship
 
-    pip install -e .
+The expected Git remotes are:
 
-[Macaulay2](http://www2.macaulay2.com/Macaulay2/) packages in the `m2/` directory are used for generating statistics
-and experimenting with known strategies. To generate the statistics, first follow the [installation
-instructions](http://www2.macaulay2.com/Macaulay2/Downloads/) for Macaulay2 and then verify that you can enter the
-Macaulay2 interpreter by typing
+```text
+origin    https://github.com/SepehrAkbari/GeoGB.git
+upstream  https://github.com/dylanpeifer/deepgroebner.git
+```
 
-    M2
+`main` is the stable GeoGB branch. Compatibility work and research changes
+should be developed on focused branches and merged only after the baseline
+checks pass.
 
-at the command line in this directory. Finally, type
+## Running experiments
 
-    i1: needsPackage("Ideals", FileName => "m2/Ideals.m2");
-    i2: needsPackage("SelectionStrategies", FileName => "m2/SelectionStrategies.m2");    
+The primary entry points are:
 
-to verify that the packages are available.
-    
-## Tests
+```bash
+python scripts/train.py --help
+python scripts/eval.py --help
+```
 
-After installation, basic tests of the Python code can be run with
+For example, the original degree-strategy experiment is:
 
-    python -m pytest
-    
-Basic tests for the Macaulay2 packages can be run inside the Macaulay2 interpreter as
+```bash
+python scripts/train.py --distribution 3-20-10-weighted --value_model degree
+```
 
-    i1: needsPackage("Ideals", FileName => "m2/Ideals.m2");
-    i2: needsPackage("SelectionStrategies", FileName => "m2/SelectionStrategies.m2");    
-    i3: check Ideals
-    i4: check SelectionStrategies
+Generated datasets, model checkpoints, and logs belong under ignored data or
+artifact directories rather than in Git. Every thesis experiment should record
+its command-line arguments, random seeds, source commit, dependency versions,
+and summarized result.
 
-The main training script can be called on the OpenAI Gym environments `CartPole-v0`, `CartPole-v1`, and
-`LunarLander-v2`, which provides a way to check the PPO implementation on known benchmarks. The commands
+To evaluate Dylan's archived `3-20-10-weighted` checkpoint without retraining:
 
-    python scripts/train.py --environment CartPole-v0 --value_model mlp --epochs 25 --verbose 2
+```bash
+scripts/run_archived_eval.sh 100 first-replication-100
+```
 
-    python scripts/train.py --environment CartPole-v1 --value_model mlp --epochs 50 --verbose 2
+Use a new run name each time. Results are written under the ignored
+`artifacts/eval/` directory; the archived data remains unchanged.
 
-    python scripts/train.py --environment LunarLander-v2 --value_model mlp --epochs 500 --verbose 2
-    
-should take a couple minutes, several minutes, and a few hours respectively. Final performance should match or exceed
-`mean_returns` of 195.0, 475.0, and 200.0 on these environments.
+## License and attribution
 
-## Running Experiments
-
-All experiments start with the `train.py` script in the `scripts` directory. For a list of arguments type
-    
-    python scripts/train.py --help
-
-Defaults are provided for all arguments in the script.
-
-For example, we can train an agent on 3-20-10-weighted using
-
-    python scripts/train.py --distribution 3-20-10-weighted --value_model degree
-
-By default, the script will create a subdirectory in `data/train/` where it will store TensorBoard logs, model
-checkpoints, and a complete list of script arguments in the file `args.txt`. After copying this file to the top
-directory, we can rerun the same experiment with
-
-    python scripts/train.py @args.txt
-
-Evaluation of trained models is performed with the `eval.py` script in the `scripts` directory, which has similar
-arguments. In particular, `--policy_weights` should receive the file containing the trained model weights.
-
-## Generating Statistics
-
-To generate statistics, use the `make_dist.m2`, `make_stats.m2`, and `make_strat.m2` scripts in the `script`
-directory. The basic workflow is to create a file of sampled ideals with
-
-    M2 --script scripts/make_dist.m2 <distribution> <samples> <seed>
-
-and then use this sample to compute values with
-
-    M2 --script scripts/make_stats.m2 <distribution>
-
-or compute performance of strategies with
-
-    M2 --script scripts/make_strat.m2 <distribution> <strategy> <seed>
-
-where seeding is only important for Random selection. Output is stored in CSV files in the `data/stats/` directory.
-
-For example, we can compute statistics and run Degree selection on 10000 samples from 3-20-10-weighted with
-
-    M2 --script scripts/make_dist.m2 3-20-10-weighted 10000 123
-    M2 --script scripts/make_stats.m2 3-20-10-weighted
-    M2 --script scripts/make_strat.m2 3-20-10-weighted degree
-
->>>>>>> upstream/master
+GeoGB retains DeepGroebner's GNU General Public License v3.0. Preserve upstream
+authorship and cite the paper, thesis, code, and dataset when using or extending
+the original work.
