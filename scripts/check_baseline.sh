@@ -4,12 +4,12 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
-if [[ ! -x .venv/bin/python ]]; then
-  echo "Missing .venv. Run scripts/setup_macos.sh first." >&2
+if ! command -v uv >/dev/null 2>&1; then
+  echo "UV is required; see README.md." >&2
   exit 1
 fi
 
-TF_CPP_MIN_LOG_LEVEL=1 .venv/bin/python -m pytest -q
+TF_CPP_MIN_LOG_LEVEL=1 uv run --locked pytest -q
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure

@@ -10,6 +10,7 @@
 
 The baseline was established on arm64 macOS 26.3 with Python 3.10.7,
 TensorFlow 2.13.1, CMake 4.3.2, Apple Clang 17.0.0, and Macaulay2 1.26.06.
+Python dependencies are resolved by UV and recorded in `uv.lock`.
 
 - Python: 148 tests passed.
 - C++: 51 tests passed across the polynomial, ideal, and Buchberger suites.

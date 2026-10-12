@@ -2,21 +2,17 @@
 
 ## Native Apple Silicon environment
 
-The maintained development baseline uses Python 3.10, TensorFlow 2.13.1,
-Gym 0.23.1, and the versions in `requirements/macos-arm64.lock.txt`. Dylan's
-original `deepgroebner.yml` is retained as an archival description of the
-2021 environment.
+The baseline uses Python 3.10, TensorFlow 2.13.1, and Gym 0.23.1. Dependencies
+are declared in `pyproject.toml` and locked in `uv.lock`.
 
 From the repository root:
 
 ```bash
 scripts/setup_macos.sh
-source .venv/bin/activate
 scripts/check_baseline.sh
 ```
 
-The setup script initializes the pinned GoogleTest submodule, creates `.venv`,
-installs the dependencies, and builds the package in editable mode.
+The setup script initializes GoogleTest and runs `uv sync --locked`.
 
 ## Macaulay2
 
@@ -36,21 +32,13 @@ check Ideals
 check SelectionStrategies
 ```
 
-On the initial GeoGB setup machine, Homebrew's Macaulay2 installation could
-not load `/opt/homebrew/opt/libffi/lib/libffi.8.dylib`. Repair the Homebrew
-installation before running these checks, normally with:
-
-```bash
-brew reinstall libffi macaulay2
-```
-
 ## Notebook use
 
 TensorFlow 2.13 constrains `typing-extensions`, so JupyterLab itself is not
 installed into the research runtime. Register the environment as a kernel:
 
 ```bash
-.venv/bin/python -m ipykernel install --user --name geogb --display-name "GeoGB"
+uv run python -m ipykernel install --user --name geogb --display-name "GeoGB"
 ```
 
 Then use that kernel from an existing JupyterLab installation.

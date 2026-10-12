@@ -10,8 +10,8 @@ policy="data/eval/3-20-10-weighted/3-20-10-weighted/policy.h5"
 reference="data/eval/3-20-10-weighted/3-20-10-weighted/results.csv"
 output="artifacts/eval/${run_name}"
 
-if [[ ! -x .venv/bin/python ]]; then
-  echo "Missing .venv. Run scripts/setup_macos.sh first." >&2
+if ! command -v uv >/dev/null 2>&1; then
+  echo "UV is required; see README.md." >&2
   exit 1
 fi
 if [[ ! -f "$policy" || ! -f "$reference" ]]; then
@@ -24,7 +24,7 @@ if [[ -e "$output" ]]; then
   exit 1
 fi
 
-TF_CPP_MIN_LOG_LEVEL=1 .venv/bin/python scripts/eval.py \
+TF_CPP_MIN_LOG_LEVEL=1 uv run --locked python scripts/eval.py \
   --environment RandomBinomialIdeal \
   --env_seed 123 \
   --distribution 3-20-10-weighted \
@@ -43,7 +43,7 @@ TF_CPP_MIN_LOG_LEVEL=1 .venv/bin/python scripts/eval.py \
   --datetag False \
   --logdir artifacts/eval
 
-.venv/bin/python - "$reference" "$output/results.csv" <<'PY'
+uv run --locked python - "$reference" "$output/results.csv" <<'PY'
 import csv
 import statistics
 import sys

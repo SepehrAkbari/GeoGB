@@ -2,7 +2,7 @@
 
 Run this script as
 
-    python scripts/make_array.py <distribution>
+    uv run python scripts/make_array.py <distribution>
 
 Input is taken from
 
@@ -38,7 +38,7 @@ def parse_to_numpy(col):
 if __name__ == "__main__":
 
     if len(sys.argv) == 1:
-        print("Usage: python scripts/make_array.py <distribution>")
+        print("Usage: uv run python scripts/make_array.py <distribution>")
         sys.exit()
 
     dist = sys.argv[1]
