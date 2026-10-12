@@ -3,7 +3,7 @@
 ## Native Apple Silicon environment
 
 The maintained development baseline uses Python 3.10, TensorFlow 2.13.1,
-Gym 0.23.1, and the versions in `requirements/macos-arm64.txt`. Dylan's
+Gym 0.23.1, and the versions in `requirements/macos-arm64.lock.txt`. Dylan's
 original `deepgroebner.yml` is retained as an archival description of the
 2021 environment.
 

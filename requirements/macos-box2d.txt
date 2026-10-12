@@ -1,2 +1,0 @@
-# Installed after macos-arm64.txt so the SWIG executable is available on PATH.
-box2d-py==2.3.5

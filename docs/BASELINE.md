@@ -8,8 +8,8 @@
 
 ## Initial native macOS baseline
 
-The first GeoGB baseline was established on Apple Silicon macOS with Python
-3.10 and TensorFlow 2.13.1.
+The baseline was established on arm64 macOS 26.3 with Python 3.10.7,
+TensorFlow 2.13.1, CMake 4.3.2, Apple Clang 17.0.0, and Macaulay2 1.26.06.
 
 - Python: 148 tests passed.
 - C++: 51 tests passed across the polynomial, ideal, and Buchberger suites.

@@ -1,4 +1,4 @@
-# Native Apple Silicon baseline. Use Python 3.10.
+# Direct dependencies. Installation uses macos-arm64.lock.txt.
 cython==0.29.37
 numpy==1.24.3
 scipy==1.10.1
@@ -11,11 +11,9 @@ tensorflow==2.13.1
 gym==0.23.1
 pygame==2.5.2
 swig==4.1.1
+box2d-py==2.3.5
 pytest==8.3.5
 pyinstrument==4.7.3
-
-# TensorFlow 2.13 requires typing-extensions < 4.6. The matching IPython
-# version keeps notebooks usable without violating that constraint.
 typing-extensions==4.5.0
 ipython==8.12.3
 ipykernel==6.29.5
