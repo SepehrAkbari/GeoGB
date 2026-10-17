@@ -1,12 +1,10 @@
 # GeoGB
 
-Based on Dylan Peifer's
-[DeepGroebner](https://github.com/dylanpeifer/deepgroebner) repository at commit
-`94f3183efd290a400ab97908e52ac04de7b259de`.
+Baseline directory, based on Dylan Peifer's [DeepGroebner](https://github.com/dylanpeifer/deepgroebner) repository. Modified slightly to use modern tools.
 
 ## Setup
 
-Requires UV, CMake, and Macaulay2.
+Requires UV, CMake, Macaulay2, and Python.
 
 ```bash
 git clone --recurse-submodules https://github.com/SepehrAkbari/GeoGB.git
@@ -18,14 +16,11 @@ scripts/check_baseline.sh
 ## Data
 
 Keep the extracted DeepGroebner archive outside this repository. Link its
-`data` directory into the repository root:
+`data` directory into the repository root
 
 ```bash
 ln -s /absolute/path/to/deepgroebner/data data
 ```
-
-The local `data` link and generated `artifacts` are ignored by Git. See
-`docs/DATA.md` for the archive URL and checksum.
 
 ## Run
 
