@@ -2,9 +2,10 @@
 
 `deepgroebner` retains Dylan Peifer's algebra engine and TensorFlow training
 implementation. `geogb` is the new PyTorch research package in the same installed
-distribution. This pass implements only an independent per-pair MLP, observations,
-batching, an environment adapter, and a masked categorical utility. It contains
-no PPO, Deep Sets, full-attention Set Transformer, ISAB, or graph policies.
+distribution. Phase 1 established an independent per-pair MLP, observations,
+batching, an environment adapter, and a masked categorical utility. Phase 2A adds
+contextual Deep Sets and full-attention Set Transformer policies; see
+[set policy notes](SET_POLICIES.md). PPO, ISAB, and graph policies remain deferred.
 The original DeepGroebner sources and the `deepgroebner` branch are unchanged.
 
 ## Environment contract
@@ -192,6 +193,6 @@ historical TensorFlow code, C++ tests, and Macaulay2 packages.
 
 Before PPO, specify rollout storage, critic observations, termination versus
 truncation bootstrapping, generator splits, RNG recording and checkpoint metadata.
-Before Deep Sets, full Set Transformer, ISAB, or GNNs, define their state context
+Before ISAB or GNNs, define their state context
 and structured features while preserving P order. No training, architecture
 comparisons, reproduction claims, or benchmarks belong to this foundation pass.

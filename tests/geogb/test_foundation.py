@@ -225,12 +225,14 @@ def test_imports_do_not_load_tensorflow():
 import sys
 from geogb.environments import BuchbergerEnv
 from geogb.observations import collate_pairs
-from geogb.models import PairMLP
+from geogb.models import make_policy
 from geogb.rl import masked_categorical
 env = BuchbergerEnv('3-3-3-weighted')
 x, _ = env.reset(seed=1)
 batch = collate_pairs([x])
-masked_categorical(PairMLP(x.shape[1])(batch), batch.mask).sample()
+for name in ['mlp', 'deep_sets', 'set_transformer']:
+    model = make_policy(name, x.shape[1]).eval()
+    masked_categorical(model(batch), batch.mask).sample()
 assert not any(k == 'tensorflow' or k.startswith('tensorflow.') for k in sys.modules)
 """
     subprocess.run([sys.executable, "-c", code], check=True, env=os.environ.copy())
