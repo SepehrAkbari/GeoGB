@@ -8,7 +8,8 @@ import torch
 from torch import nn
 
 from geogb.environments import BuchbergerEnv
-from geogb.models import DeepSetsPolicy, PairMLP, SetTransformerPolicy, make_policy
+from geogb.models import (DeepSetsPolicy, InducedSetTransformerPolicy, PairMLP,
+                         SetTransformerPolicy, make_policy)
 from geogb.models.attention import MultiheadAttentionBlock, SetAttentionBlock
 from geogb.observations import PairBatch, collate_pairs
 from geogb.rl import masked_categorical
@@ -16,10 +17,12 @@ from geogb.rl import masked_categorical
 
 DEVICES = ["cpu", pytest.param("cuda", marks=pytest.mark.skipif(
     not torch.cuda.is_available(), reason="CUDA unavailable"))]
-POLICIES = ["mean", "sum", "attention"]
+POLICIES = ["mean", "sum", "attention", "induced_1", "induced_3", "induced_5"]
 
 
 def policy(kind, feature_dim=4, **kwargs):
+    if kind.startswith("induced_"):
+        return InducedSetTransformerPolicy(feature_dim, num_inducing=int(kind.split("_")[1]), **kwargs)
     if kind == "attention":
         return SetTransformerPolicy(feature_dim, **kwargs)
     return DeepSetsPolicy(feature_dim, aggregation=kind, **kwargs)
@@ -99,6 +102,11 @@ def test_gradients_and_serialization(kind, device):
     for name, parameter in model.named_parameters():
         assert parameter.grad is not None, name
         assert torch.isfinite(parameter.grad).all(), name
+    if kind.startswith("induced_"):
+        for block in model.blocks:
+            assert block.inducing_vectors.grad.abs().sum() > 0
+            assert block.induce.attention.in_proj_weight.grad.abs().sum() > 0
+            assert block.distribute.attention.in_proj_weight.grad.abs().sum() > 0
     assert torch.isfinite(features.grad).all()
     assert (features.grad[~batch.mask] == 0).all()
     assert features.grad[batch.mask].abs().sum() > 0
@@ -180,22 +188,25 @@ def test_attention_keys_values_and_cross_attention(device):
 
 
 @pytest.mark.parametrize("device", DEVICES)
-def test_dropout(device):
+@pytest.mark.parametrize("kind", ["attention", "induced_3"])
+def test_dropout(device, kind):
     torch.manual_seed(15)
     batch = collate_pairs(observations(), device=device)
-    model = SetTransformerPolicy(4, dropout=.5).to(device).train()
+    model = policy(kind, dropout=.5).to(device).train()
     first, second = model(batch), model(batch)
     assert not torch.allclose(first[batch.mask], second[batch.mask])
     assert (first[~batch.mask] == 0).all() and (second[~batch.mask] == 0).all()
     model.eval()
     with torch.no_grad():
         torch.testing.assert_close(model(batch), model(batch), rtol=0, atol=0)
-    deterministic = SetTransformerPolicy(4, dropout=0).to(device).train()
+    deterministic = policy(kind, dropout=0).to(device).train()
     torch.testing.assert_close(deterministic(batch), deterministic(batch), rtol=0, atol=0)
     # Confirm dropout reaches both attention weights and residual branches.
-    block = model.blocks[0].block
-    assert block.attention.dropout == .5
-    assert block.attention_dropout.p == .5 and block.feedforward_dropout.p == .5
+    blocks = ([model.blocks[0].block] if kind == "attention"
+              else [model.blocks[0].induce, model.blocks[0].distribute])
+    for block in blocks:
+        assert block.attention.dropout == .5
+        assert block.attention_dropout.p == .5 and block.feedforward_dropout.p == .5
 
 
 @pytest.mark.parametrize("kind", POLICIES)
@@ -206,6 +217,10 @@ def test_context_reaches_other_actions(kind):
     x = batch.features.clone().requires_grad_()
     model(PairBatch(x, batch.mask))[0, 0].backward()
     assert x.grad[0, 1:].abs().sum() > 0
+    changed = batch.features.clone()
+    changed[0, 1, 0] += 10
+    assert not torch.allclose(model(PairBatch(changed, batch.mask))[0, 0],
+                              model(batch)[0, 0], atol=1e-7, rtol=1e-7)
 
 
 @pytest.mark.parametrize("device", DEVICES)
@@ -238,10 +253,21 @@ def test_factory_and_configuration():
     assert transformer.projection.out_features == 64
     assert transformer.blocks[0].block.attention.num_heads == 4
     assert transformer.blocks[0].block.feedforward[0].out_features == 128
+    induced = make_policy("induced_set_transformer", 4)
+    assert isinstance(induced, InducedSetTransformerPolicy)
+    assert len(induced.blocks) == 2 and induced.projection.out_features == 64
+    for block in induced.blocks:
+        assert block.inducing_vectors.shape == (16, 64)
+        assert block.induce.attention.num_heads == 4
+        assert block.distribute.feedforward[0].out_features == 128
+        assert block.induce.attention.dropout == .1
     batch = collate_pairs(observations())
     for model in [DeepSetsPolicy(4, 12, hidden_dim=17, encoder_depth=3, scorer_depth=4, activation=nn.Tanh),
                   SetTransformerPolicy(4, 12, num_heads=3, depth=3, feedforward_dim=19,
-                                       activation=nn.GELU, dropout=0)]:
+                                       activation=nn.GELU, dropout=0),
+                  InducedSetTransformerPolicy(4, 12, num_heads=3, num_inducing=7,
+                                              depth=3, feedforward_dim=19,
+                                              activation=nn.GELU, dropout=0)]:
         assert model(batch).shape == (3, 3)
     with pytest.raises(ValueError, match="policy name"):
         make_policy("isab", 4)
@@ -264,9 +290,10 @@ def test_bad_deep_sets_configuration(kwargs):
                                      {"depth": 0}, {"depth": 1.5},
                                      {"feedforward_dim": -1}, {"dropout": -.1},
                                      {"dropout": 1.1}, {"dropout": float("nan")}])
-def test_bad_transformer_configuration(kwargs):
+@pytest.mark.parametrize("constructor", [SetTransformerPolicy, InducedSetTransformerPolicy])
+def test_bad_transformer_configuration(kwargs, constructor):
     with pytest.raises(ValueError):
-        SetTransformerPolicy(**{"feature_dim": 4, **kwargs})
+        constructor(**{"feature_dim": 4, **kwargs})
 
 
 def test_attention_mask_validation_and_sab():

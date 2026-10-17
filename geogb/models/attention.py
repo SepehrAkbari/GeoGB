@@ -1,4 +1,4 @@
-"""Masked attention blocks reusable for self-attention and future inducing sets."""
+"""Masked self-attention and inducing-point attention blocks."""
 
 import math
 
@@ -77,3 +77,40 @@ class SetAttentionBlock(nn.Module):
     def forward(self, features: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         """Return masked contextual features in the input row order."""
         return self.block(features, features, mask, mask)
+
+
+class InducedSetAttentionBlock(nn.Module):
+    """Two-stage cross-attention: U = MAB(I, X), output = MAB(X, U).
+
+    Each block owns num_inducing learned vectors of width embed_dim, initialized
+    with Xavier uniform on the (num_inducing, embed_dim) parameter matrix. The
+    same vectors are expanded across observations without detaching gradients.
+    The two MABs have independent parameters and use the existing post-normalized
+    residual/FF convention. Attention lengths are (m, P) and (P, m), with no
+    candidate self-attention; attention computation is O(P*m*embed_dim).
+
+    All inducing queries/context rows are valid. Original candidate masks apply
+    to first-stage keys/values and second-stage queries. Empty candidate states
+    are rejected by the first MAB. Defaults match SAB, with 16 inducing points.
+    """
+
+    def __init__(self, embed_dim: int = 64, num_heads: int = 4, *,
+                 num_inducing: int = 16, feedforward_dim: int = 128,
+                 dropout: float = 0.1, activation: type[nn.Module] = nn.ReLU) -> None:
+        super().__init__()
+        positive_integer(num_inducing, "num_inducing")
+        self.induce = MultiheadAttentionBlock(embed_dim, num_heads,
+                                              feedforward_dim=feedforward_dim,
+                                              dropout=dropout, activation=activation)
+        self.distribute = MultiheadAttentionBlock(embed_dim, num_heads,
+                                                  feedforward_dim=feedforward_dim,
+                                                  dropout=dropout, activation=activation)
+        self.inducing_vectors = nn.Parameter(torch.empty(num_inducing, embed_dim))
+        nn.init.xavier_uniform_(self.inducing_vectors)
+
+    def forward(self, features: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        """Return contextual (B, P, d) rows, with zeros at invalid queries."""
+        inducing = self.inducing_vectors.unsqueeze(0).expand(features.shape[0], -1, -1)
+        inducing_mask = torch.ones(inducing.shape[:2], dtype=torch.bool, device=inducing.device)
+        context = self.induce(inducing, features, inducing_mask, mask)
+        return self.distribute(features, context, mask, inducing_mask)

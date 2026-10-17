@@ -4,10 +4,10 @@ Structure-aware reinforcement learning research for S-pair selection, based on
 Dylan Peifer's [DeepGroebner](https://github.com/dylanpeifer/deepgroebner).
 The `deepgroebner` package retains the original environment and TensorFlow code;
 the new `geogb` package provides PyTorch MLP, contextual Deep Sets, and
-full-attention Set Transformer policies. See the
+full-attention and induced Set Transformer policies. See the
 [PyTorch interface and setup notes](agent/PYTORCH_FOUNDATION.md) for usage and
-validation, and the [set policy notes](agent/SET_POLICIES.md) for Phase 2A.
-PyTorch PPO, ISAB, and graph policies are deferred to later passes.
+validation, and the [set policy notes](agent/SET_POLICIES.md) for Phases 2A/2B.
+PyTorch PPO and graph policies are deferred to later passes.
 
 ## Setup
 

@@ -4,8 +4,9 @@
 implementation. `geogb` is the new PyTorch research package in the same installed
 distribution. Phase 1 established an independent per-pair MLP, observations,
 batching, an environment adapter, and a masked categorical utility. Phase 2A adds
-contextual Deep Sets and full-attention Set Transformer policies; see
-[set policy notes](SET_POLICIES.md). PPO, ISAB, and graph policies remain deferred.
+contextual Deep Sets and full-attention Set Transformer policies; Phase 2B adds
+an Induced Set Transformer. See [set policy notes](SET_POLICIES.md).
+PPO and graph policies remain deferred.
 The original DeepGroebner sources and the `deepgroebner` branch are unchanged.
 
 ## Environment contract
@@ -193,6 +194,6 @@ historical TensorFlow code, C++ tests, and Macaulay2 packages.
 
 Before PPO, specify rollout storage, critic observations, termination versus
 truncation bootstrapping, generator splits, RNG recording and checkpoint metadata.
-Before ISAB or GNNs, define their state context
+Before GNNs, define their state context
 and structured features while preserving P order. No training, architecture
 comparisons, reproduction claims, or benchmarks belong to this foundation pass.

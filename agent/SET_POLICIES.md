@@ -1,12 +1,13 @@
-# Phase 2A: contextual set policies
+# Phases 2A and 2B: contextual set policies
 
-GeoGB now includes three native PyTorch policies: independent `PairMLP`,
-`DeepSetsPolicy`, and `SetTransformerPolicy`. All accept `PairBatch`, return raw
+GeoGB now includes four native PyTorch policies: independent `PairMLP`,
+`DeepSetsPolicy`, `SetTransformerPolicy`, and `InducedSetTransformerPolicy`.
+All accept `PairBatch`, return raw
 (B, P) action logits in the original row order, and use the existing
 `masked_categorical(logits, batch.mask)`. Invalid scores are zero; they must
 still be masked when selecting actions. Every policy rejects any batch member
 with no valid actions. The algebra environment and its action indices are unchanged.
-No dependencies or lock entries changed in Phase 2A.
+No dependencies or lock entries changed in Phases 2A or 2B.
 
 ## Contextual Deep Sets
 
@@ -72,6 +73,44 @@ attention normalization. It sanitizes padded queries/context before projection
 (including arbitrary NaN padding), and zeros invalid query outputs. Policies
 also clear padding before input projection and after scoring.
 
+## Induced Set Transformer (Phase 2B)
+
+`InducedSetTransformerPolicy` replaces each SAB with a reusable
+`InducedSetAttentionBlock`:
+
+    U = MAB(I, X)
+    X_prime = MAB(X, U)
+
+Each ISAB owns an (m, d) `nn.Parameter` named `inducing_vectors`, initialized
+with Xavier uniform (bounds ±sqrt(6/(m+d))). It is shared across observations
+using `unsqueeze(0).expand(B, -1, -1)`, so gradients accumulate into one parameter
+matrix. Different blocks have independent inducing vectors. The `induce` and
+`distribute` MABs also have independent parameters. Neither stage collapses the
+action dimension of the policy output or introduces positional embeddings.
+
+Stage one uses all-valid inducing queries and the candidate validity mask for
+keys/values. Stage two uses candidate queries with their original mask and an
+all-valid induced context. Existing MAB padding sanitization protects both stages
+from NaNs in padded rows. Both stages reuse the full-attention policy's residual,
+LayerNorm, feedforward, and dropout conventions.
+
+Constructor options match `SetTransformerPolicy`, plus `num_inducing=16`.
+Defaults are embed_dim=64, num_heads=4, depth=2, feedforward_dim=128,
+dropout=0.1, activation=nn.ReLU. Any positive inducing count is allowed, including
+m < P, m = P, and m > P. Input projection and final per-action linear scoring
+are unchanged. The factory name is `'induced_set_transformer'`:
+
+```python
+model = make_policy('induced_set_transformer', feature_dim=12, num_inducing=16)
+```
+
+Each block performs attention only with query/key lengths (m, P) and (P, m).
+Attention work is approximately O(P*m*d), compared with O(P²*d) for SAB, plus
+projection/feedforward costs. There is no candidate-to-candidate P×P attention
+operation. For small P or m comparable to P, two cross-attention stages can cost
+more than one SAB; lower asymptotic interaction counts alone do not establish
+runtime or memory improvements on a particular device/kernel.
+
 ## Usage, reproducibility, and checks
 
 Use `uv sync --locked` and the existing Python 3.10/PyTorch 2.1.2 setup described
@@ -89,7 +128,7 @@ torch.manual_seed(42)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 batch = collate_pairs(observations, device=device)
 model = make_policy('set_transformer', batch.features.shape[-1]).to(device).eval()
-# Alternatives: make_policy('deep_sets', d, aggregation='sum') or 'mlp'.
+# Alternatives: 'induced_set_transformer', 'deep_sets', or 'mlp'.
 with torch.no_grad():
     actions = masked_categorical(model(batch), batch.mask).sample()
 ```
@@ -111,18 +150,47 @@ Tests check the Deep Sets formula directly, non-prefix masks, arbitrary padding,
 key/value exclusion, cross-attention with unequal query/context lengths,
 context dependence, single-action states, terminal rejection, permutation
 and batch consistency, gradients, dropout, serialization, distribution use,
-and seeded short native Buchberger episodes. CUDA cases skip without a device.
+and seeded short native Buchberger episodes. ISAB tests include m=1, 3, and 5
+against three-action states, exact stage-mask/shape contracts, independent stage
+parameters, shared inducing-gradient accumulation, and nonzero attention and
+inducing gradients in stacked policies. CUDA cases skip without a device.
 
-## Reuse for ISAB and deferred work
+## Optional forward-pass diagnostic
+
+The diagnostic is opt-in and is not run by pytest:
+
+```bash
+uv run --locked python scripts/diagnose_attention.py --sizes 32 128 512
+uv run --locked python scripts/diagnose_attention.py --device cuda --sizes 128 512 2048 --num-inducing 16
+```
+
+It compares matching widths, heads, depth, and feedforward dimensions with dropout
+disabled, using synthetic all-valid float32 batches. Configuration/version/device
+metadata goes to stderr; CSV results go to stdout. Options include batch size,
+embedding dimensions, inducing count, warmups, repeats, seed, and CPU threads.
+Timing is the median synchronized forward duration, excluding construction,
+transfer, warmup, and profiling. No wall-clock assertions are made.
+
+On CPU, `cpu_allocation_bytes` is the sum of positive self-allocation events in
+one separately profiled forward. It measures allocation traffic, including
+temporary tensors; it is **not** peak live memory or process RSS. On CUDA,
+`cuda_incremental_peak_bytes` is peak allocated tensor memory above the warmed-up
+model/input baseline, excluding cached reserved memory and non-PyTorch allocations.
+The unused device-specific memory column is blank. `attention_interactions` is a
+theoretical B×heads×depth×P² (SAB) or B×heads×depth×2Pm (ISAB) count, not measured
+allocated attention weights; PyTorch may use fused attention kernels.
+
+Large sizes can exhaust memory; choose sizes for the available machine. Results
+describe untrained evaluation forwards only and do not predict PPO backward-pass
+memory or speed. This pass only smoke-checks tiny CPU inputs, not large benchmarks.
+
+## Reusable components and deferred work
 
 `models/attention.py` provides `MultiheadAttentionBlock` with separate query and
-context tensors/masks and `SetAttentionBlock` for self-attention. The former can
-be reused for both future ISAB stages: inducing queries attend to pair context,
-then pair queries attend to the induced context. Unequal lengths and separate
-mask gradients are already tested. `models/common.py` provides rowwise
-feedforward construction and pair-policy input validation. Inducing parameters,
-ISAB assembly, and its factory entry are intentionally absent.
+context tensors/masks, `SetAttentionBlock` for self-attention, and
+`InducedSetAttentionBlock` for two-stage inducing attention. `models/common.py`
+provides rowwise feedforward construction and pair-policy input validation.
 
-PPO, training infrastructure, graph networks, and Phase 2B remain deferred.
+PPO, training infrastructure, and graph networks remain deferred.
 The existing PyTorch-version and native cyclic-generator caveats still apply.
 Remote CUDA execution and scaling on large pair sets remain unverified here.

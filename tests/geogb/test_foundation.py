@@ -230,7 +230,7 @@ from geogb.rl import masked_categorical
 env = BuchbergerEnv('3-3-3-weighted')
 x, _ = env.reset(seed=1)
 batch = collate_pairs([x])
-for name in ['mlp', 'deep_sets', 'set_transformer']:
+for name in ['mlp', 'deep_sets', 'set_transformer', 'induced_set_transformer']:
     model = make_policy(name, x.shape[1]).eval()
     masked_categorical(model(batch), batch.mask).sample()
 assert not any(k == 'tensorflow' or k.startswith('tensorflow.') for k in sys.modules)
