@@ -1,6 +1,11 @@
 # GeoGB
 
-Baseline directory, based on Dylan Peifer's [DeepGroebner](https://github.com/dylanpeifer/deepgroebner) repository. Modified slightly to use modern tools.
+Structure-aware reinforcement learning research for S-pair selection, based on
+Dylan Peifer's [DeepGroebner](https://github.com/dylanpeifer/deepgroebner).
+The `deepgroebner` package retains the original environment and TensorFlow code;
+the new `geogb` package currently provides a PyTorch MLP foundation. See the
+[PyTorch interface and setup notes](agent/PYTORCH_FOUNDATION.md) for usage and
+validation. PyTorch PPO and set-based policies are deferred to later passes.
 
 ## Setup
 
